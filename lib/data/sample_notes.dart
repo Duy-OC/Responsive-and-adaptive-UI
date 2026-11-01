@@ -53,7 +53,8 @@ final List<Note> sampleNotes = <Note>[
   Note(
     id: 'note-04',
     title: 'Hẹn khám sức khỏe',
-    content: 'Thứ 4 lúc 15:00 tại phòng khám gần nhà. Nhớ mang theo sổ khám bệnh.',
+    content:
+        'Thứ 4 lúc 15:00 tại phòng khám gần nhà. Nhớ mang theo sổ khám bệnh.',
     color: notePastelColors[3],
     updatedAt: DateTime(2026, 10, 23, 10, 30),
   ),
