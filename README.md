@@ -138,6 +138,16 @@ adaptive_notes/
    ```
    > File APK thành phẩm được lưu tại: `build/app/outputs/flutter-apk/app-release.apk`.
 
+### 📦 File APK đóng gói sẵn
+
+Bản APK release đã được đóng gói và lưu trong thư mục [`release/`](release/):
+
+- **Đường dẫn:** [`release/adaptive_notes-v1.0.0-release.apk`](release/adaptive_notes-v1.0.0-release.apk)
+- **Phiên bản:** `1.0.0+1` (versionCode 1, versionName 1.0.0)
+- **Dung lượng:** ~46.5 MB
+- **Cách cài đặt:** Tải file APK về thiết bị Android, bật *"Cài đặt từ nguồn không xác định"* nếu được yêu cầu, sau đó mở file để cài đặt.
+- **Lưu ý:** APK được ký bằng **debug keystore** (cấu hình mặc định của Flutter), phù hợp cho mục đích demo và học tập. Khi phát hành chính thức trên Google Play cần tạo signing config riêng.
+
 ---
 
 ## ⌨️ Thao tác & Phím tắt
