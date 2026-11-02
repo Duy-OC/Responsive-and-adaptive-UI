@@ -1,182 +1,267 @@
-# Adaptive Notes — Responsive & Adaptive UI trong Flutter
+# Adaptive Notes — Ứng dụng ghi chú Responsive & Adaptive UI
 
-Ứng dụng ghi chú Flutter minh họa toàn diện **Chủ đề 3: Thiết kế giao diện đa màn hình (Responsive & Adaptive UI)**. Ứng dụng không sử dụng phụ thuộc bên ngoài (third-party packages), tận dụng tối đa các công cụ tích hợp sẵn của Flutter framework (`LayoutBuilder`, `MediaQuery`, `Constraints`, `Shortcuts`, `Actions`, `ThemeData`).
+Ứng dụng ghi chú viết bằng **Flutter**, minh họa đầy đủ chủ đề **Thiết kế giao diện đa màn hình (Responsive & Adaptive UI)**: bố cục tự động chuyển đổi theo kích thước cửa sổ, lưới nội dung co giãn theo bề rộng thực tế, hỗ trợ cảm ứng – chuột – bàn phím, và tối ưu cho theme sáng/tối cùng cỡ chữ phóng to.
 
-Dữ liệu được quản lý in-memory (RAM) với 10 ghi chú mẫu khởi tạo; hỗ trợ đầy đủ các thao tác CRUD (thêm, sửa, xóa, hoàn tác), bảo toàn trạng thái khi xoay hoặc thay đổi kích thước cửa sổ.
-
----
-
-## 📑 Mục lục
-
-- [Tính năng nổi bật](#tính-năng-nổi-bật)
-- [Nguyên tắc Responsive & Adaptive](#nguyên-tắc-responsive--adaptive)
-- [Cấu trúc dự án](#cấu-trúc-dự-án)
-- [Hướng dẫn cài đặt & Khởi chạy](#hướng-dẫn-cài-đặt--khởi-chạy)
-- [Thao tác & Phím tắt](#thao-tác--phím-tắt)
-- [Kiểm thử & Đảm bảo chất lượng](#kiểm-thử--đảm-bảo-chất-lượng)
-- [Tài liệu liên quan](#tài-liệu-liên-quan)
+Dự án **không sử dụng bất kỳ package bên thứ ba nào** ở runtime; toàn bộ được xây dựng bằng các API có sẵn của Flutter (`LayoutBuilder`, `MediaQuery`, `Constraints`, `Shortcuts`, `Actions`, `ThemeData`).
 
 ---
 
-## ✨ Tính năng nổi bật
+## 1. Tổng quan
 
-- **Bố cục Responsive & Adaptive:**
-  - Tự động chuyển đổi giữa bố cục **1 cột danh sách (Mobile Layout)** và **2 vùng Master-Detail (Tablet Layout)** dựa theo bề rộng khả dụng.
-  - Vùng danh sách tự động chia **1, 2 hoặc 3 cột** dựa trên bề rộng thực tế của chính nó (`LayoutBuilder`), không phụ thuộc cứng vào kích thước toàn màn hình.
-- **Thao tác dữ liệu đầy đủ (CRUD):**
-  - Thêm mới ghi chú, chỉnh sửa tiêu đề và nội dung, chọn màu chủ đề từ bảng màu pastel 6 màu.
-  - Kiểm tra tính hợp lệ dữ liệu (validation bắt buộc tiêu đề).
-  - Xóa ghi chú nhanh bằng nút xóa hoặc cử chỉ vuốt ngang (Dismissible) kèm nút **Hoàn tác (Undo)** qua `SnackBar`.
-- **Đa phương thức nhập liệu (Multi-modal input):**
-  - **Cảm ứng (Touch):** Chạm mở xem, vuốt để xóa thẻ ghi chú.
-  - **Chuột (Mouse):** Hiệu ứng hover, đổi con trỏ chuột (`SystemMouseCursors.click`), nút xóa trực quan thay thế vuốt.
-  - **Bàn phím (Keyboard shortcuts):** Hỗ trợ phím tắt `Ctrl + N` (tạo ghi chú mới) và `Ctrl + S` (lưu ghi chú).
-- **Trợ năng & Giao diện tối ưu:**
-  - Hỗ trợ đầy đủ **Theme sáng / tối (Light / Dark mode)** theo hệ thống với Material 3.
-  - Chiều cao thẻ tự động co giãn thích ứng theo hệ số phóng to chữ của người dùng (`MediaQuery.textScalerOf`), đảm bảo không bị tràn chữ (`overflow`).
-  - Thanh thông số Layout Debug Bar trực quan hiển thị kích thước cửa sổ, kích thước vùng chứa, hướng màn hình và loại layout hiện tại.
+| Thông tin | Giá trị |
+|---|---|
+| **Tên ứng dụng** | Adaptive Notes |
+| **Phiên bản** | `1.0.0+1` (versionCode 1, versionName 1.0.0) |
+| **Nền tảng** | Android (APK release), hỗ trợ chạy Web/Desktop khi phát triển |
+| **Ngôn ngữ** | Dart |
+| **Dữ liệu** | In-memory (RAM), 10 ghi chú mẫu, đầy đủ CRUD |
+| **APK đóng gói sẵn** | [`release/adaptive_notes-v1.0.0-release.apk`](release/adaptive_notes-v1.0.0-release.apk) (~46.5 MB) |
 
----
+**Mục tiêu của dự án:**
 
-## 📐 Nguyên tắc Responsive & Adaptive
-
-### 1. Bố cục màn hình (Master-Detail Breakpoint)
-- Áp dụng `LayoutBuilder` ở `HomeScreen` để đo `constraints.maxWidth`:
-  - **< 600 dp:** **Mobile Layout** — Hiển thị danh sách; khi chọn một ghi chú, chi tiết mở trên cùng màn hình cha (quản lý qua trạng thái nội bộ và `PopScope` để nút Back quay về danh sách mượt mà).
-  - **≥ 600 dp:** **Tablet Layout** — Hiển thị giao diện 2 vùng song song theo tỷ lệ `flex: 2` (danh sách ghi chú) và `flex: 3` (chi tiết ghi chú).
-
-### 2. Lưới thẻ ghi chú thích ứng (Content-width Grid Columns)
-- `NoteList` sử dụng `LayoutBuilder` độc lập để đo chính xác bề rộng nội dung sau khi trừ padding ngang:
-  - **< 400 dp:** `1 cột` (danh sách dạng dọc, tối ưu cho điện thoại dọc hoặc vùng pane hẹp).
-  - **400 – 899 dp:** `2 cột` (lưới 2 cột cân đối).
-  - **≥ 900 dp:** `3 cột` (lưới 3 cột thoáng trên màn hình tablet lớn hoặc desktop).
-
-### 3. Giới hạn bề rộng tối đa (Max-width constraints)
-- Form tạo/chỉnh sửa (`NoteEditScreen`) được giới hạn độ rộng tối đa **640 dp** và căn giữa (`Center` + `ConstrainedBox`), tránh form bị giãn rộng quá mức trên màn hình lớn.
-- Nội dung chi tiết (`NoteDetailView`) được giới hạn bề rộng **720 dp** để duy trì độ dài dòng tối ưu cho việc đọc.
+- Áp dụng `LayoutBuilder` để chọn bố cục **Mobile** hoặc **Tablet** theo bề rộng khả dụng.
+- Xây dựng lưới ghi chú tự động chia **1 / 2 / 3 cột** dựa trên bề rộng của chính vùng chứa.
+- Đảm bảo giao diện không tràn (`overflow`) khi xoay màn hình, đổi kích thước cửa sổ hoặc tăng cỡ chữ hệ thống.
+- Hỗ trợ đa phương thức nhập liệu: chạm, chuột và phím tắt.
 
 ---
 
-## 📂 Cấu trúc dự án
+## 2. Tính năng chính
+
+### 2.1. Bố cục Responsive & Adaptive
+
+| Bề rộng khả dụng | Bố cục | Mô tả |
+|---|---|---|
+| `< 600 dp` | **Mobile Layout** | Danh sách ghi chú toàn màn hình; chọn ghi chú sẽ mở màn hình chi tiết, nút Back quay về danh sách (xử lý qua `PopScope`). |
+| `≥ 600 dp` | **Tablet Layout** | Hai vùng song song **Master–Detail** theo tỷ lệ `flex: 2` (danh sách) và `flex: 3` (chi tiết). |
+
+Lưới ghi chú (`NoteList`) tự đo bề rộng nội dung bằng `LayoutBuilder`:
+
+| Bề rộng vùng danh sách | Số cột |
+|---|---|
+| `< 400 dp` | 1 cột |
+| `400 – 899 dp` | 2 cột |
+| `≥ 900 dp` | 3 cột |
+
+Ngoài ra, form thêm/sửa được giới hạn tối đa **640 dp** và nội dung chi tiết **720 dp**, căn giữa để đảm bảo độ dài dòng dễ đọc trên màn hình lớn.
+
+### 2.2. Quản lý ghi chú (CRUD)
+
+- Thêm mới ghi chú với tiêu đề, nội dung và màu chủ đề (6 màu pastel).
+- Chỉnh sửa tiêu đề/nội dung, có kiểm tra hợp lệ (bắt buộc nhập tiêu đề).
+- Xóa bằng nút thùng rác hoặc vuốt ngang thẻ (`Dismissible`).
+- **Hoàn tác (Undo)** ghi chú vừa xóa thông qua `SnackBar`.
+- Giữ nguyên ghi chú đang chọn khi xoay màn hình hoặc thay đổi kích thước cửa sổ.
+
+### 2.3. Đa phương thức nhập liệu
+
+- **Cảm ứng:** chạm để mở, vuốt để xóa.
+- **Chuột:** hiệu ứng hover, đổi con trỏ (`SystemMouseCursors.click`), nút xóa trực quan.
+- **Bàn phím:** `Ctrl + N` tạo ghi chú mới, `Ctrl + S` lưu ghi chú.
+
+### 2.4. Trợ năng & giao diện
+
+- Material 3 với **theme sáng/tối** theo cài đặt hệ thống.
+- Chiều cao thẻ co giãn theo hệ số phóng to chữ (`MediaQuery.textScalerOf`), không tràn nội dung.
+- **Layout Debug Bar** hiển thị kích thước cửa sổ, kích thước vùng chứa, hướng màn hình và loại bố cục hiện tại.
+
+### 2.5. Kiểm thử tự động
+
+- 13 bài kiểm thử unit + widget, bao quát breakpoint, model, CRUD, phím tắt, resize và overflow.
+- Công cụ kiểm tra tĩnh 12 quy tắc thiết kế bố cục.
+
+---
+
+## 3. Công nghệ sử dụng
+
+| Thành phần | Công nghệ / Phiên bản |
+|---|---|
+| **Framework** | Flutter 3.47.7 (stable) |
+| **Ngôn ngữ** | Dart 3.13.5 (ràng buộc `^3.13.0`) |
+| **UI** | Material 3, `ColorScheme.fromSeed`, hỗ trợ Light/Dark theme |
+| **Quản lý trạng thái** | `StatefulWidget` + `setState` (không dùng package ngoài) |
+| **Thư viện runtime** | Không có third-party package |
+| **Kiểm thử & lint** | `flutter_test`, `flutter_lints ^6.0.0` |
+| **Build Android** | Gradle 9.3.1, Android Gradle Plugin (Kotlin DSL), JDK 17 |
+| **Định dạng dữ liệu** | Model bất biến (`Note`) với `copyWith` |
+
+---
+
+## 4. Điều kiện tiên quyết
+
+Trước khi chạy dự án, hãy đảm bảo máy đã cài đặt:
+
+1. **Flutter SDK (stable)** với Dart `>= 3.13.0 < 4.0.0`.
+   ```bash
+   flutter --version
+   ```
+2. **Android SDK** (platform & build-tools phù hợp) nếu muốn build APK.
+   ```bash
+   flutter doctor
+   ```
+3. **JDK 17 trở lên** (có thể dùng JDK đi kèm Android Studio).
+4. **Thiết bị/emulator Android** đã bật chế độ nhà phát triển và USB debugging (hoặc Chrome/Edge nếu chạy bản web).
+5. Đã chấp nhận giấy phép Android:
+   ```bash
+   flutter doctor --android-licenses
+   ```
+
+> Nếu `flutter doctor` báo thiếu thành phần nào, hãy xử lý theo hướng dẫn trước khi tiếp tục.
+
+---
+
+## 5. Hướng dẫn cài đặt
+
+### 5.1. Clone mã nguồn
+
+```bash
+git clone https://github.com/Duy-OC/Responsive-and-adaptive-UI.git
+cd Responsive-and-adaptive-UI
+```
+
+### 5.2. Cài đặt dependency
+
+```bash
+flutter pub get
+```
+
+### 5.3. Chạy ứng dụng ở chế độ phát triển
+
+```bash
+flutter run
+```
+
+Flutter sẽ tự phát hiện thiết bị/emulator đang kết nối. Có thể chỉ định thiết bị:
+
+```bash
+flutter devices
+flutter run -d <device-id>
+```
+
+### 5.4. Build APK release
+
+```bash
+flutter build apk --release
+```
+
+File APK được tạo tại:
+
+```text
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+### 5.5. Sử dụng APK đóng gói sẵn
+
+Bản APK đã build thành công được lưu trong thư mục [`release/`](release/):
+
+- **Đường dẫn:** [`release/adaptive_notes-v1.0.0-release.apk`](release/adaptive_notes-v1.0.0-release.apk)
+- **Cài đặt qua ADB:**
+  ```bash
+  adb install -r release/adaptive_notes-v1.0.0-release.apk
+  ```
+- **Cài đặt thủ công:** chép file APK sang thiết bị Android, bật *"Cài đặt từ nguồn không xác định"* nếu được yêu cầu, sau đó mở file để cài.
+- **Lưu ý:** APK hiện được ký bằng **debug keystore** (cấu hình mặc định của Flutter), phù hợp cho mục đích demo và học tập. Khi phát hành chính thức cần cấu hình signing riêng.
+
+---
+
+## 6. Cách sử dụng
+
+### 6.1. Các thao tác cơ bản
+
+1. **Xem chi tiết:** chạm/click vào một thẻ ghi chú.
+2. **Thêm ghi chú:** nhấn nút `+` (hoặc `Ctrl + N`), nhập tiêu đề/nội dung, chọn màu rồi lưu.
+3. **Sửa ghi chú:** mở ghi chú → nhấn nút chỉnh sửa → cập nhật → lưu (`Ctrl + S`).
+4. **Xóa ghi chú:** nhấn nút thùng rác hoặc vuốt thẻ sang trái.
+5. **Hoàn tác:** nhấn **"Hoàn tác"** trên thanh thông báo vừa hiện.
+6. **Xem thông số bố cục:** nhấn biểu tượng thông tin trên AppBar để bật/tắt Layout Debug Bar.
+
+### 6.2. Phím tắt
+
+| Phím tắt | Chức năng | Nền tảng |
+|---|---|---|
+| `Ctrl + N` | Mở màn hình tạo ghi chú mới | Bàn phím |
+| `Ctrl + S` | Lưu ghi chú đang chỉnh sửa | Bàn phím |
+
+### 6.3. Trải nghiệm bố cục thích ứng
+
+- **Trên điện thoại:** xoay dọc/ngang để thấy giao diện chuyển giữa danh sách và chi tiết.
+- **Trên tablet/desktop:** kéo giãn cửa sổ qua ngưỡng **600 dp** để chuyển từ bố cục 1 cột sang Master–Detail.
+- **Kiểm tra trợ năng:** tăng cỡ chữ hệ thống lên 1.5×–2× và chuyển theme tối để xác nhận giao diện không bị tràn.
+
+### 6.4. Kiểm tra chất lượng mã nguồn
+
+```bash
+# Phân tích tĩnh
+flutter analyze
+
+# Chạy toàn bộ unit & widget tests
+flutter test
+
+# Kiểm tra 12 quy tắc bố cục
+dart run tool/check_layout_rules.dart
+```
+
+**Trạng thái hiện tại:** `flutter analyze` không phát hiện lỗi, toàn bộ **13/13** bài kiểm thử đạt, 12/12 quy tắc bố cục đạt, và APK release đã build thành công.
+
+---
+
+## 7. Cấu trúc thư mục
 
 ```text
 adaptive_notes/
-├── android/                   # Cấu hình nền tảng Android
-├── docs/                      # Tài liệu chi tiết dự án
-│   ├── project_guide.md       # Giải thích kiến trúc, luồng chạy & mã nguồn
-│   ├── report_outline.md      # Dàn ý báo cáo & kịch bản demo
-│   └── validation.md          # Kết quả kiểm thử và nghiệm thu
+├── android/                        # Cấu hình nền tảng Android (Gradle Kotlin DSL)
+├── docs/                           # Tài liệu chi tiết dự án
+│   ├── project_guide.md            # Kiến trúc, luồng chạy và giải thích mã nguồn
+│   ├── report_outline.md           # Dàn ý báo cáo và kịch bản demo
+│   └── validation.md               # Kết quả kiểm thử và nghiệm thu
 ├── lib/
 │   ├── data/
-│   │   └── sample_notes.dart  # 10 ghi chú mẫu và bảng màu pastel
+│   │   └── sample_notes.dart       # 10 ghi chú mẫu và bảng màu pastel
 │   ├── layouts/
-│   │   ├── mobile_layout.dart # Bố cục cho màn hình hẹp (< 600dp)
-│   │   └── tablet_layout.dart # Bố cục 2 vùng Master-Detail (≥ 600dp)
+│   │   ├── mobile_layout.dart      # Bố cục màn hình hẹp (< 600 dp)
+│   │   └── tablet_layout.dart      # Bố cục Master–Detail (≥ 600 dp)
 │   ├── models/
-│   │   └── note.dart          # Data model bất biến (Immutable Note model)
+│   │   └── note.dart               # Model bất biến của ghi chú
 │   ├── screens/
-│   │   ├── home_screen.dart   # Màn hình chính quản lý State, phím tắt & layout
-│   │   ├── note_detail_screen.dart # Vỏ bọc chi tiết cho màn hình hẹp
-│   │   └── note_edit_screen.dart   # Form thêm/sửa ghi chú có validation
+│   │   ├── home_screen.dart        # State, phím tắt và điều phối bố cục
+│   │   ├── note_detail_screen.dart # Màn hình chi tiết cho thiết bị hẹp
+│   │   └── note_edit_screen.dart   # Form thêm/sửa có validation
 │   ├── utils/
-│   │   ├── breakpoints.dart   # Định nghĩa enum ScreenType và các ngưỡng dp
-│   │   └── responsive_helper.dart  # Hàm tính số cột và khoảng đệm động
+│   │   ├── breakpoints.dart        # Enum ScreenType và các ngưỡng dp
+│   │   └── responsive_helper.dart  # Tính số cột và khoảng đệm động
 │   ├── widgets/
-│   │   ├── empty_state.dart   # Widget hiển thị trạng thái trống
-│   │   ├── layout_debug_bar.dart # Thanh hiển thị thông số kích thước và layout
-│   │   ├── note_card.dart     # Thẻ ghi chú hỗ trợ hover, con trỏ và nút xóa
-│   │   ├── note_detail_view.dart   # Vùng hiển thị chi tiết ghi chú dùng chung
-│   │   └── note_list.dart     # Lưới ghi chú thích ứng kèm cử chỉ vuốt xóa
-│   └── main.dart              # Điểm khởi chạy ứng dụng & thiết lập ThemeData
+│   │   ├── empty_state.dart        # Trạng thái danh sách trống
+│   │   ├── layout_debug_bar.dart   # Thanh thông số kích thước/bố cục
+│   │   ├── note_card.dart          # Thẻ ghi chú (hover, con trỏ, nút xóa)
+│   │   ├── note_detail_view.dart   # Vùng hiển thị chi tiết dùng chung
+│   │   └── note_list.dart          # Lưới ghi chú thích ứng + vuốt xóa
+│   └── main.dart                   # Điểm khởi chạy và cấu hình theme
+├── release/
+│   └── adaptive_notes-v1.0.0-release.apk  # APK release đóng gói sẵn
+├── report/                         # Slide báo cáo (LaTeX + PDF)
 ├── test/
-│   ├── breakpoints_test.dart  # Kiểm thử logic breakpoint & tính toán cột
-│   ├── note_test.dart         # Kiểm thử model Note và dữ liệu mẫu
-│   └── widget_test.dart       # Kiểm thử giao diện, đổi kích thước, CRUD, phím tắt & trợ năng
+│   ├── breakpoints_test.dart       # Kiểm thử breakpoint và số cột
+│   ├── note_test.dart              # Kiểm thử model và dữ liệu mẫu
+│   └── widget_test.dart            # Kiểm thử giao diện, CRUD, phím tắt, overflow
 ├── tool/
-│   └── check_layout_rules.dart# Tool kiểm tra tĩnh tính tuân thủ các quy tắc layout
-└── pubspec.yaml               # Cấu hình Flutter & dependencies
+│   └── check_layout_rules.dart     # Kiểm tra tĩnh 12 quy tắc bố cục
+├── analysis_options.yaml           # Cấu hình lint
+├── pubspec.yaml                    # Khai báo package và phiên bản
+└── README.md
 ```
 
----
+Tài liệu tham khảo thêm:
 
-## 🚀 Hướng dẫn cài đặt & Khởi chạy
-
-### Yêu cầu môi trường
-- Flutter SDK (kênh stable) với Dart SDK tương thích theo `pubspec.yaml`.
-- Thiết bị thật hoặc máy ảo (Android Emulator / Chrome / Desktop).
-
-### Các lệnh thực thi
-
-1. **Cài đặt thư viện:**
-   ```sh
-   flutter pub get
-   ```
-
-2. **Kiểm tra phân tích mã nguồn (Static analysis):**
-   ```sh
-   flutter analyze
-   ```
-
-3. **Chạy toàn bộ unit & widget tests:**
-   ```sh
-   flutter test
-   ```
-
-4. **Kiểm tra quy tắc bố cục:**
-   ```sh
-   dart run tool/check_layout_rules.dart
-   ```
-
-5. **Khởi chạy ứng dụng:**
-   ```sh
-   flutter run
-   ```
-
-6. **Đóng gói file cài đặt APK (Android Release):**
-   ```sh
-   flutter build apk --release
-   ```
-   > File APK thành phẩm được lưu tại: `build/app/outputs/flutter-apk/app-release.apk`.
-
-### 📦 File APK đóng gói sẵn
-
-Bản APK release đã được đóng gói và lưu trong thư mục [`release/`](release/):
-
-- **Đường dẫn:** [`release/adaptive_notes-v1.0.0-release.apk`](release/adaptive_notes-v1.0.0-release.apk)
-- **Phiên bản:** `1.0.0+1` (versionCode 1, versionName 1.0.0)
-- **Dung lượng:** ~46.5 MB
-- **Cách cài đặt:** Tải file APK về thiết bị Android, bật *"Cài đặt từ nguồn không xác định"* nếu được yêu cầu, sau đó mở file để cài đặt.
-- **Lưu ý:** APK được ký bằng **debug keystore** (cấu hình mặc định của Flutter), phù hợp cho mục đích demo và học tập. Khi phát hành chính thức trên Google Play cần tạo signing config riêng.
-
----
-
-## ⌨️ Thao tác & Phím tắt
-
-| Thao tác | Mô tả | Nền tảng áp dụng |
-|---|---|---|
-| **Chạm / Click vào thẻ** | Xem chi tiết ghi chú tương ứng | Cảm ứng, Chuột |
-| **Vuốt thẻ sang trái** | Xóa nhanh ghi chú khỏi danh sách | Cảm ứng (Touch) |
-| **Nút thùng rác trên thẻ** | Xóa ghi chú trực tiếp bằng click chuột | Chuột, Cảm ứng |
-| **Nút "Hoàn tác"** | Phục hồi lại ghi chú vừa xóa từ thanh thông báo | Mọi nền tảng |
-| `Ctrl + N` | Mở nhanh màn hình tạo ghi chú mới | Bàn phím |
-| `Ctrl + S` | Lưu ghi chú trong màn hình thêm / sửa | Bàn phím |
-| **Nút thông tin (Info icon)** | Bật / tắt thanh hiển thị thông số kích thước debug | AppBar |
-
----
-
-## 🧪 Kiểm thử & Đảm bảo chất lượng
-
-Dự án bao gồm bộ kiểm thử tự động toàn diện:
-- **`test/breakpoints_test.dart`**: Kiểm tra ngưỡng đổi bố cục tại 600dp, kiểm tra cách tính cột theo bề rộng thực tế của pane danh sách, khoảng đệm linh hoạt.
-- **`test/note_test.dart`**: Đảm bảo tính bất biến của `Note`, rút gọn preview 100 ký tự kèm dấu ba chấm, tính độc lập của danh sách mẫu.
-- **`test/widget_test.dart`**: Kiểm tra chuyển đổi bố cục khi thay đổi kích thước cửa sổ không mất lựa chọn; kiểm tra đầy đủ luồng thêm, sửa, xóa, hoàn tác; kiểm tra phím tắt `Ctrl+N`, `Ctrl+S`; kiểm tra không xảy ra lỗi tràn giao diện (`overflow`) ở các kích thước và tỷ lệ phóng chữ từ 1.0× đến 2.0× trên cả theme sáng lẫn tối.
-- **`tool/check_layout_rules.dart`**: Kiểm tra 12 quy tắc thiết kế giao diện tự động.
-
----
-
-## 📚 Tài liệu liên quan
-
-Chi tiết hơn về thiết kế, kịch bản báo cáo và kết quả đánh giá được lưu trong thư mục `docs/`:
 - [Giải thích chi tiết cấu trúc & mã nguồn](docs/project_guide.md)
 - [Kịch bản demo và dàn ý báo cáo](docs/report_outline.md)
 - [Báo cáo trạng thái kiểm tra & nghiệm thu](docs/validation.md)
+
+---
+
+## 9. Giấy phép
+
+Dự án được thực hiện cho **mục đích học tập và báo cáo môn học** về Responsive & Adaptive UI. Repository hiện **chưa bao gồm tệp `LICENSE` chính thức**; mọi quyền sử dụng mã nguồn thuộc về tác giả.
+
+- Được phép đọc, tham khảo và học hỏi từ mã nguồn.
+- Vui lòng liên hệ tác giả nếu muốn sử dụng lại cho mục đích khác hoặc phát hành thương mại.
+- Thư viện **Flutter** sử dụng trong dự án được phát hành theo giấy phép **BSD-3-Clause** của Google.
